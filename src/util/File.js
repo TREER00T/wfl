@@ -28,6 +28,9 @@ let size,
         CRITICAL
     ],
     accessToDelete,
+    lookFile = 'look.txt',
+    npmignore = '.npmignore',
+    gitignore = '.gitignore',
     wflScopeInUserPackageJson,
     rootScopeInPackageJson;
 
@@ -48,9 +51,14 @@ try {
 let isRelease = wflType === 'release';
 
 
-function getOffsetForDeleteFiles(offset) {
+function getMaximumTimeForDeleteOldFiles(offset) {
     let twoHours = 7200;
     return (typeof offset === 'string') ? ms(offset) : twoHours;
+}
+
+function getMaximumSizeForWriteFile() {
+    let MaxFileSize = 26214400;
+    return (typeof size === 'string') ? Util.sizeToByte(size) : MaxFileSize;
 }
 
 
@@ -122,47 +130,66 @@ function isExistFile(path) {
 }
 
 function fileIgnoreHandler() {
-    if (!isExistFile('.gitignore')) {
-        mkIgnoreFileInUserRootProject('.gitignore');
-        writeIntoFile('.gitignore', '/' + getFolderName(pathDir) + '/\n');
+    if (!isExistFile(gitignore)) {
+        mkIgnoreFileInUserRootProject(gitignore);
+        writeIntoFile(gitignore, slash + getFolderName(pathDir) + slash + '\n');
         return;
     }
 
-    if (isExistFile('.gitignore')) {
-        isSpecificDataWrittenInThisFile('.gitignore', getFolderName(pathDir), result => {
+    if (isExistFile(gitignore)) {
+        isSpecificDataWrittenInThisFile(gitignore, getFolderName(pathDir), result => {
             if (!result)
-                appendDataIntoFile('.gitignore', '\n/' + getFolderName(pathDir) + '/');
+                appendDataIntoFile(gitignore, '\n' + slash + getFolderName(pathDir) + slash);
         });
     }
 
-    if (!isExistFile('.npmignore')) {
-        mkIgnoreFileInUserRootProject('.npmignore');
-        writeIntoFile('.npmignore', getFolderName(pathDir) + '\n');
+    if (!isExistFile(npmignore)) {
+        mkIgnoreFileInUserRootProject(npmignore);
+        writeIntoFile(npmignore, getFolderName(pathDir) + '\n');
         return;
     }
 
-    if (isExistFile('.npmignore')) {
-        isSpecificDataWrittenInThisFile('.npmignore', getFolderName(pathDir), result => {
+    if (isExistFile(npmignore)) {
+        isSpecificDataWrittenInThisFile(npmignore, getFolderName(pathDir), result => {
             if (!result)
-                appendDataIntoFile('.npmignore', '\n' + getFolderName(pathDir));
+                appendDataIntoFile(npmignore, '\n' + getFolderName(pathDir));
         });
     }
 
 }
 
+function getFileName(path) {
+    let fileNameInDisk;
+    try {
+        fileNameInDisk = fs.readFileSync(path + lookFile);
+    } catch (e) {
+
+    }
+    return (fileNameInDisk === undefined) ? Util.getRandomFileName() : fileNameInDisk.toString();
+}
 
 function fileHandlerFoEachDir(type, message) {
 
-    let fileName = Util.getRandomFileName(),
-        path = pathDir + slash + type + slash + fileName;
+    let fileName = getFileName(),
+        path = pathDir + slash + type + slash;
 
-    if (isExistFile(path)) {
-        appendDataIntoFile(path, '\n' + getMessageInJsonObject(type, message));
+    if (!isExistFile(path + fileName)) {
+        writeIntoFile(path + fileName, getMessageInJsonObject(type, message) + '\n');
+        writeIntoFile(path + lookFile, fileName);
         return;
     }
 
-    mkdirp(path);
-    writeIntoFile(path, getMessageInJsonObject(type, message) + '\n');
+    let fileSize = fs.statSync(path + fileName).size;
+    if (fileSize < getMaximumSizeForWriteFile())
+        return appendDataIntoFile(path + fileName, '\n' + getMessageInJsonObject(type, message));
+
+    if (fileSize > getMaximumSizeForWriteFile()) {
+        let newFileName = Util.getRandomFileName();
+        writeIntoFile(path + newFileName, getMessageInJsonObject(type, message) + '\n');
+        writeIntoFile(path + lookFile, newFileName);
+    }
+
+
 }
 
 
@@ -206,7 +233,7 @@ function DeleteFileAfterSpecifiedPeriod() {
                             return;
                         }
                         now = new Date().getTime();
-                        endTime = new Date(stat.ctime).getTime() + getOffsetForDeleteFiles();
+                        endTime = new Date(stat.ctime).getTime() + getMaximumTimeForDeleteOldFiles();
                         if (now > endTime) {
                             return rimraf(realPath + file);
                         }
@@ -214,7 +241,7 @@ function DeleteFileAfterSpecifiedPeriod() {
                 });
             });
         });
-    }, getOffsetForDeleteFiles());
+    }, getMaximumTimeForDeleteOldFiles());
 }
 
 
@@ -229,11 +256,6 @@ module.exports = {
         }
     },
 
-
-    readFile() {
-
-
-    },
 
     writeFile(type, message) {
         if (isRelease)

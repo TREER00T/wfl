@@ -18,19 +18,24 @@ module.exports = {
             str += chars[decimal];
         }
 
-        return str.trim();
+        return str.trim() + '.txt';
     },
 
 
-    bytesToSize(realSize) {
-        const decimalLength = 2,
-            packetSize = 1024;
+    sizeToByte(realSize) {
+        if (typeof realSize !== 'string')
+            return realSize;
 
-        let d = Math.floor(Math.log(realSize) / Math.log(packetSize));
+        let packetSize = 1024,
+            arr = realSize.split(''),
+            typeSize = arr.pop(),
+            arrOfTypeSize = ['b', 'k', 'm', 'g', 't'],
+            indexFromArrTypeSize = (type) => {
+                return arrOfTypeSize.indexOf(type);
+            },
+            size = arr.join('');
 
-        return 0 === realSize ? '0 B' :
-            parseFloat((realSize / Math.pow(packetSize, d)).toFixed(Math.max(0, decimalLength))) +
-            ' ' + ['B', 'K', 'M', 'G'][d];
+        return size * Math.pow(packetSize, indexFromArrTypeSize(typeSize));
     }
 
 
