@@ -37,7 +37,7 @@ let size,
 
 try {
     wflScopeInUserPackageJson = JSON.parse(fs.readFileSync('package.json').toString());
-    rootScopeInPackageJson = JSON.parse(fs.readFileSync(__dirname + '/package.json').toString());
+    rootScopeInPackageJson = JSON.parse(fs.readFileSync(__dirname + slash + 'package.json').toString());
     wflScopeInUserPackageJson = rootScopeInPackageJson['wfl'];
     size = wflScopeInUserPackageJson['size'];
     where = wflScopeInUserPackageJson['where'];
@@ -81,8 +81,8 @@ function isSpecificDataWrittenInThisFile(filename, specificData, cb) {
 
 
 function getFolderName(pathDir) {
-    if (pathDir.includes('/')) {
-        let arr = pathDir.split('/');
+    if (pathDir.includes(slash)) {
+        let arr = pathDir.split(slash);
         return arr[arr.length - 1];
     }
     return pathDir;
@@ -112,7 +112,7 @@ function mkRootDir() {
     if (pathDir !== undefined && fs.existsSync(pathDir))
         return;
 
-    pathDir = './log';
+    pathDir = slash + 'log';
     if (!fs.existsSync(pathDir))
         mkAllDirsFromList();
 }
