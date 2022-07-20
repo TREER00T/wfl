@@ -14,14 +14,12 @@
   "devDependencies": {
     "nodemon": "^2.0.16"
   },
+  "wflType": "dev",
   "keywords": [
     "log",
     "log-manager",
     "logger"
   ],
-  "wfl": {
-    "path": "./logger"
-  },
   "author": "Ali Azmoodeh <treeroot.ir@gmail.com>",
   "license": "MIT",
   "bugs": {
@@ -29,7 +27,6 @@
   },
   "homepage": "https://github.com/treegex/wfl#readme",
   "dependencies": {
-    "jest": "^28.1.3",
     "mkdirp": "^1.0.4",
     "ms": "^2.1.3",
     "rimraf": "^3.0.2"

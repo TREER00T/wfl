@@ -1,15 +1,6 @@
-let {
-    mkRootDir,
-    DeleteFileAfterSpecifiedPeriod
-} = require('../util/File');
+let File = require('../util/File');
 
-function init() {
-    mkRootDir();
-    DeleteFileAfterSpecifiedPeriod();
-}
-
-init();
-
+File.init();
 
 module.exports = {
 
