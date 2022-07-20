@@ -1,6 +1,6 @@
 {
   "name": "wfl",
-  "version": "0.1.0",
+  "version": "0.5.0-beta",
   "description": "Log Management System",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,7 @@
   "devDependencies": {
     "nodemon": "^2.0.16"
   },
-  "wflType": "dev",
+  "wflType": "release",
   "keywords": [
     "log",
     "log-manager",
