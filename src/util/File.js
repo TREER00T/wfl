@@ -217,7 +217,7 @@ function DeleteFileAfterSpecifiedPeriod() {
 
                 }
 
-            }, ms(where[key]));
+            }, parseInt(ms(where[key])));
         }
         return;
     }
