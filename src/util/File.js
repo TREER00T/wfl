@@ -90,10 +90,16 @@ function getFolderName(pathDir) {
 
 
 function getMessageInJsonObject(type, message) {
+    if (typeof message === 'string')
+        return {
+            "date": new Date(),
+            "type": type,
+            "message": message
+        }
     return {
         "date": new Date(),
         "type": type,
-        "message": message
+        "data": message
     }
 }
 
