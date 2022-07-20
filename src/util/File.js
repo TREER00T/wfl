@@ -2,6 +2,7 @@ let fs = require('fs'),
     ms = require('ms'),
     rimraf = require('rimraf'),
     mkdirp = require('mkdirp'),
+    Util = require('../util/Util'),
     {
         INFO,
         ERROR,
@@ -26,6 +27,7 @@ let size,
         WANING,
         CRITICAL
     ],
+    accessToDelete,
     wflScopeInUserPackageJson,
     rootScopeInPackageJson;
 
@@ -39,8 +41,11 @@ try {
     pathDir = wflScopeInUserPackageJson['path'];
     offset = wflScopeInUserPackageJson['offset'];
     wflType = rootScopeInPackageJson['wflType'];
+    accessToDelete = wflScopeInUserPackageJson['accessToDelete'];
 } catch (e) {
 }
+
+let isRelease = wflType === 'release';
 
 
 function getOffsetForDeleteFiles(offset) {
@@ -56,11 +61,6 @@ function mkAllDirsFromList() {
 }
 
 
-function isExistGitignoreInUserProject() {
-    return fs.existsSync('.gitignore');
-}
-
-
 function isSpecificDataWrittenInThisFile(filename, specificData, cb) {
     fs.readFile(filename, (err, data) => {
         if (!err && data.includes(specificData)) {
@@ -72,17 +72,21 @@ function isSpecificDataWrittenInThisFile(filename, specificData, cb) {
 }
 
 
-function isExistNpmIgnoreInUserProject() {
-    return fs.existsSync('.npmignore');
-}
-
-
 function getFolderName(pathDir) {
     if (pathDir.includes('/')) {
         let arr = pathDir.split('/');
         return arr[arr.length - 1];
     }
     return pathDir;
+}
+
+
+function getMessageInJsonObject(type, message) {
+    return {
+        "date": new Date(),
+        "type": type,
+        "message": message
+    }
 }
 
 
@@ -99,45 +103,66 @@ function mkRootDir() {
         mkAllDirsFromList();
 }
 
-function mkIgnoreFile(fileName) {
+function mkIgnoreFileInUserRootProject(fileName) {
     fs.mkdirSync(fileName);
 }
 
 
-function appendDataInIgnoreFile(fileName, data) {
-    fs.appendFileSync(fileName, data);
+function appendDataIntoFile(path, data) {
+    fs.appendFileSync(path, data);
 }
 
-function writeInIgnoreFile(fileName, data) {
-    fs.writeFileSync(fileName, data);
+function writeIntoFile(path, data) {
+    fs.writeFileSync(path, data);
 }
 
+
+function isExistFile(path) {
+    return fs.existsSync(path);
+}
 
 function fileIgnoreHandler() {
-    if (!isExistGitignoreInUserProject()) {
-        mkIgnoreFile('.gitignore');
-        writeInIgnoreFile('.gitignore', '/' + getFolderName(pathDir) + '/\n')
+    if (!isExistFile('.gitignore')) {
+        mkIgnoreFileInUserRootProject('.gitignore');
+        writeIntoFile('.gitignore', '/' + getFolderName(pathDir) + '/\n');
+        return;
     }
 
-    if (isExistGitignoreInUserProject()) {
+    if (isExistFile('.gitignore')) {
         isSpecificDataWrittenInThisFile('.gitignore', getFolderName(pathDir), result => {
             if (!result)
-                appendDataInIgnoreFile('.gitignore', '\n/' + getFolderName(pathDir) + '/');
+                appendDataIntoFile('.gitignore', '\n/' + getFolderName(pathDir) + '/');
         });
     }
 
-    if (!isExistNpmIgnoreInUserProject()) {
-        mkIgnoreFile('.npmignore');
-        writeInIgnoreFile('.npmignore', getFolderName(pathDir) + '\n')
+    if (!isExistFile('.npmignore')) {
+        mkIgnoreFileInUserRootProject('.npmignore');
+        writeIntoFile('.npmignore', getFolderName(pathDir) + '\n');
+        return;
     }
 
-    if (isExistNpmIgnoreInUserProject()) {
+    if (isExistFile('.npmignore')) {
         isSpecificDataWrittenInThisFile('.npmignore', getFolderName(pathDir), result => {
             if (!result)
-                appendDataInIgnoreFile('.npmignore', '\n' + getFolderName(pathDir));
+                appendDataIntoFile('.npmignore', '\n' + getFolderName(pathDir));
         });
     }
 
+}
+
+
+function fileHandlerFoEachDir(type, message) {
+
+    let fileName = Util.getRandomFileName(),
+        path = pathDir + slash + type + slash + fileName;
+
+    if (isExistFile(path)) {
+        appendDataIntoFile(path, '\n' + getMessageInJsonObject(type, message));
+        return;
+    }
+
+    mkdirp(path);
+    writeIntoFile(path, getMessageInJsonObject(type, message) + '\n');
 }
 
 
@@ -196,10 +221,11 @@ function DeleteFileAfterSpecifiedPeriod() {
 module.exports = {
 
     init() {
-        if (wflType === 'release') {
+        if (isRelease) {
             mkRootDir();
             fileIgnoreHandler();
-            DeleteFileAfterSpecifiedPeriod();
+            if (accessToDelete || accessToDelete === undefined)
+                DeleteFileAfterSpecifiedPeriod();
         }
     },
 
@@ -207,6 +233,11 @@ module.exports = {
     readFile() {
 
 
+    },
+
+    writeFile(type, message) {
+        if (isRelease)
+            fileHandlerFoEachDir(type, message);
     }
 
 }

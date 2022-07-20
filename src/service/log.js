@@ -5,7 +5,7 @@ File.init();
 module.exports = {
 
     writeFile(type, message) {
-
+        File.writeFile(type, message);
     }
 
 }
