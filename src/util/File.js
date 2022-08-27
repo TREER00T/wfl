@@ -32,24 +32,25 @@ let size,
     npmignore = '.npmignore',
     gitignore = '.gitignore',
     wflScopeInUserPackageJson,
+    wflObjectScopeInUserPackageJson,
     rootScopeInPackageJson;
 
 
 try {
     wflScopeInUserPackageJson = JSON.parse(fs.readFileSync('package.json').toString());
-    rootScopeInPackageJson = JSON.parse(fs.readFileSync(__dirname + slash + 'package.json').toString());
-    wflScopeInUserPackageJson = rootScopeInPackageJson['wfl'];
-    size = wflScopeInUserPackageJson['size'];
-    where = wflScopeInUserPackageJson['where'];
-    pathDir = wflScopeInUserPackageJson['path'];
-    offset = wflScopeInUserPackageJson['offset'];
-    wflType = rootScopeInPackageJson['wflType'];
-    accessToDelete = wflScopeInUserPackageJson['accessToDelete'];
+    rootScopeInPackageJson = JSON.parse(fs.readFileSync(__dirname + '/../../' + slash + 'package.json').toString());
 } catch (e) {
 }
 
-let isRelease = wflType === 'release';
+wflObjectScopeInUserPackageJson = wflScopeInUserPackageJson?.wfl;
+size = wflObjectScopeInUserPackageJson?.size;
+where = wflObjectScopeInUserPackageJson?.where;
+pathDir = wflObjectScopeInUserPackageJson?.path;
+offset = wflObjectScopeInUserPackageJson?.offset;
+accessToDelete = wflObjectScopeInUserPackageJson?.accessToDelete;
+wflType = rootScopeInPackageJson?.wflType;
 
+let isRelease = wflType === 'release';
 
 function getMaximumTimeForDeleteOldFiles(offset) {
     let twoHours = 7200;
@@ -91,16 +92,8 @@ function getFolderName(pathDir) {
 
 function getMessageInJsonObject(type, message) {
     if (typeof message === 'string')
-        return {
-            "date": new Date(),
-            "type": type,
-            "message": message
-        }
-    return {
-        "date": new Date(),
-        "type": type,
-        "data": message
-    }
+        return `{ "data": "${new Date()}", "type": "${type}", "message": "${message}" }`;
+    return `{ "data": "${new Date()}", "type": "${type}", "message": ${JSON.stringify(message)} }`;
 }
 
 
@@ -118,7 +111,7 @@ function mkRootDir() {
 }
 
 function mkIgnoreFileInUserRootProject(fileName) {
-    fs.mkdirSync(fileName);
+    fs.writeFileSync(fileName, '');
 }
 
 
@@ -175,9 +168,8 @@ function getFileName(path) {
 }
 
 function fileHandlerFoEachDir(type, message) {
-
-    let fileName = getFileName(),
-        path = pathDir + slash + type + slash;
+    let path = pathDir + slash + type + slash,
+        fileName = getFileName(path);
 
     if (!isExistFile(path + fileName)) {
         writeIntoFile(path + fileName, getMessageInJsonObject(type, message) + '\n');
@@ -215,7 +207,9 @@ function DeleteFileAfterSpecifiedPeriod() {
                                 now = new Date().getTime();
                                 endTime = new Date(stat.ctime).getTime() + ms(where[key]);
                                 if (now > endTime) {
-                                    return rimraf(realPath + file);
+                                    fs.unlink(realPath + file, err => {
+
+                                    });
                                 }
                             });
                         });
@@ -241,7 +235,9 @@ function DeleteFileAfterSpecifiedPeriod() {
                         now = new Date().getTime();
                         endTime = new Date(stat.ctime).getTime() + getMaximumTimeForDeleteOldFiles();
                         if (now > endTime) {
-                            return rimraf(realPath + file);
+                            fs.unlink(realPath + file, err => {
+
+                            });
                         }
                     });
                 });
@@ -264,8 +260,11 @@ module.exports = {
 
 
     writeFile(type, message) {
-        if (isRelease)
-            fileHandlerFoEachDir(type, message);
+        if (isRelease) {
+            setInterval(() => {
+                fileHandlerFoEachDir(type, message);
+            }, getMaximumTimeForDeleteOldFiles());
+        }
     }
 
 }
