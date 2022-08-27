@@ -1,6 +1,5 @@
 let fs = require('fs'),
     ms = require('ms'),
-    rimraf = require('rimraf'),
     mkdirp = require('mkdirp'),
     Util = require('../util/Util'),
     {
