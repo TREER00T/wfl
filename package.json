@@ -1,6 +1,6 @@
 {
   "name": "wfl",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Log Management System",
   "main": "index.js",
   "scripts": {
@@ -19,6 +19,7 @@
     "log-manager",
     "logger"
   ],
+  "types": "index.d.ts",
   "author": "Ali Azmoodeh <treeroot.ir@gmail.com>",
   "license": "MIT",
   "bugs": {
