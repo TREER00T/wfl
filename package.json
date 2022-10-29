@@ -1,6 +1,6 @@
 {
   "name": "wfl",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Log Management System",
   "main": "index.js",
   "scripts": {

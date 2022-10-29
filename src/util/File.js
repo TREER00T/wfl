@@ -53,12 +53,12 @@ let isRelease = wflType === 'release';
 
 function getMaximumTimeForDeleteOldFiles(offset) {
     let twoHours = 7200;
-    return (typeof offset === 'string') ? ms(offset) : twoHours;
+    return typeof offset === 'string' ? ms(offset) : twoHours;
 }
 
 function getMaximumSizeForWriteFile() {
     let MaxFileSize = 26214400;
-    return (typeof size === 'string') ? Util.sizeToByte(size) : MaxFileSize;
+    return typeof size === 'string' ? Util.sizeToByte(size) : MaxFileSize;
 }
 
 
@@ -97,16 +97,8 @@ function getMessageInJsonObject(type, message) {
 
 
 function mkRootDir() {
-    if (pathDir !== undefined && !fs.existsSync(pathDir)) {
+    if (pathDir && !isExistFile(pathDir) || !isExistFile(slash + 'log'))
         return mkAllDirsFromList();
-    }
-
-    if (pathDir !== undefined && fs.existsSync(pathDir))
-        return;
-
-    pathDir = slash + 'log';
-    if (!fs.existsSync(pathDir))
-        mkAllDirsFromList();
 }
 
 function mkIgnoreFileInUserRootProject(fileName) {
@@ -163,7 +155,7 @@ function getFileName(path) {
     } catch (e) {
 
     }
-    return (fileNameInDisk === undefined) ? Util.getRandomFileName() : fileNameInDisk.toString();
+    return !fileNameInDisk ? Util.getRandomFileName() : fileNameInDisk.toString();
 }
 
 function fileHandlerFoEachDir(type, message) {
@@ -200,9 +192,9 @@ function DeleteFileAfterSpecifiedPeriod() {
                         files.forEach(file => {
                             fs.stat(realPath + file, (err, stat) => {
                                 let endTime, now;
-                                if (err) {
+                                if (err)
                                     return;
-                                }
+
                                 now = new Date().getTime();
                                 endTime = new Date(stat.ctime).getTime() + ms(where[key]);
                                 if (now > endTime) {
@@ -228,9 +220,9 @@ function DeleteFileAfterSpecifiedPeriod() {
                 files.forEach(file => {
                     fs.stat(realPath + file, (err, stat) => {
                         let endTime, now;
-                        if (err) {
+                        if (err)
                             return;
-                        }
+
                         now = new Date().getTime();
                         endTime = new Date(stat.ctime).getTime() + getMaximumTimeForDeleteOldFiles();
                         if (now > endTime) {
@@ -252,7 +244,7 @@ module.exports = {
         if (isRelease) {
             mkRootDir();
             fileIgnoreHandler();
-            if (accessToDelete || accessToDelete === undefined)
+            if (accessToDelete === true)
                 DeleteFileAfterSpecifiedPeriod();
         }
     },
