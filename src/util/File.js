@@ -172,12 +172,39 @@ function fileHandlerFoEachDir(type, message) {
     if (fileSize < getMaximumSizeForWriteFile())
         return appendDataIntoFile(path + fileName, '\n' + getMessageInJsonObject(type, message));
 
-    if (fileSize > getMaximumSizeForWriteFile()) {
-        let newFileName = Util.getRandomFileName();
-        writeIntoFile(path + newFileName, getMessageInJsonObject(type, message) + '\n');
-        writeIntoFile(path + lookFile, newFileName);
-    }
 
+    // The file size is greater than the getMaximumSizeForWriteFile function
+    let newFileName = Util.getRandomFileName();
+    writeIntoFile(path + newFileName, getMessageInJsonObject(type, message) + '\n');
+    writeIntoFile(path + lookFile, newFileName);
+
+}
+
+
+function filesHandler(realPath, userTime) {
+
+    fs.readdir(realPath, (err, files) => {
+
+        files.forEach(file => {
+
+            fs.stat(realPath + file, (err, stat) => {
+
+                let endTime, now;
+                if (err)
+                    return;
+
+                now = new Date().getTime();
+                endTime = new Date(stat.ctime).getTime() + userTime;
+
+                if (now > endTime)
+                    fs.unlink(realPath + file, () => {
+                    });
+
+            });
+
+        });
+
+    });
 
 }
 
@@ -186,27 +213,12 @@ function DeleteFileAfterSpecifiedPeriod() {
     if (typeof where === 'object') {
         for (let key in where) {
             setInterval(() => {
-                if (where.hasOwnProperty(key)) {
-                    let realPath = pathDir + slash + key + slash;
-                    fs.readdir(realPath, (err, files) => {
-                        files.forEach(file => {
-                            fs.stat(realPath + file, (err, stat) => {
-                                let endTime, now;
-                                if (err)
-                                    return;
 
-                                now = new Date().getTime();
-                                endTime = new Date(stat.ctime).getTime() + ms(where[key]);
-                                if (now > endTime) {
-                                    fs.unlink(realPath + file, err => {
+                if (!where.hasOwnProperty(key))
+                    return;
 
-                                    });
-                                }
-                            });
-                        });
-                    });
-
-                }
+                let realPath = pathDir + slash + key + slash;
+                filesHandler(realPath, ms(where[key]));
 
             }, parseInt(ms(where[key])));
         }
@@ -216,23 +228,9 @@ function DeleteFileAfterSpecifiedPeriod() {
     setInterval(() => {
         listOfDir.forEach(item => {
             let realPath = pathDir + slash + item + slash;
-            fs.readdir(realPath, (err, files) => {
-                files.forEach(file => {
-                    fs.stat(realPath + file, (err, stat) => {
-                        let endTime, now;
-                        if (err)
-                            return;
 
-                        now = new Date().getTime();
-                        endTime = new Date(stat.ctime).getTime() + getMaximumTimeForDeleteOldFiles();
-                        if (now > endTime) {
-                            fs.unlink(realPath + file, err => {
+            filesHandler(realPath, getMaximumTimeForDeleteOldFiles());
 
-                            });
-                        }
-                    });
-                });
-            });
         });
     }, getMaximumTimeForDeleteOldFiles());
 }
@@ -241,21 +239,24 @@ function DeleteFileAfterSpecifiedPeriod() {
 module.exports = {
 
     init() {
-        if (isRelease) {
-            mkRootDir();
-            fileIgnoreHandler();
-            if (accessToDelete === true)
-                DeleteFileAfterSpecifiedPeriod();
-        }
+        if (!isRelease)
+            return false;
+
+        mkRootDir();
+        fileIgnoreHandler();
+        if (accessToDelete === true)
+            DeleteFileAfterSpecifiedPeriod();
+
     },
 
 
-    writeFile(type, message) {
-        if (isRelease) {
+    write(type, message) {
+
+        if (isRelease)
             setInterval(() => {
                 fileHandlerFoEachDir(type, message);
             }, getMaximumTimeForDeleteOldFiles());
-        }
+
     }
 
 }
