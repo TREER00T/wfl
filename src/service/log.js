@@ -4,8 +4,8 @@ File.init();
 
 module.exports = {
 
-    writeFile(type, message) {
-        File.write(type, message);
+    async writeFile(type, message) {
+        await File.write(type, message);
     }
 
 }

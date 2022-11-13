@@ -12,12 +12,7 @@ let fs = require('fs'),
     } = require('../util/const');
 
 
-let size,
-    where,
-    offset,
-    pathDir,
-    wflType,
-    slash = '/',
+let slash = '/',
     listOfDir = [
         INFO,
         ERROR,
@@ -26,7 +21,6 @@ let size,
         WANING,
         CRITICAL
     ],
-    accessToDelete,
     lookFile = 'look.txt',
     npmignore = '.npmignore',
     gitignore = '.gitignore',
@@ -34,53 +28,66 @@ let size,
     wflObjectScopeInUserPackageJson,
     rootScopeInPackageJson;
 
+init();
 
-try {
-    wflScopeInUserPackageJson = JSON.parse(fs.readFileSync('package.json').toString());
-    rootScopeInPackageJson = JSON.parse(fs.readFileSync(__dirname + '/../../' + slash + 'package.json').toString());
-} catch (e) {
+
+async function init() {
+    try {
+        wflScopeInUserPackageJson = await fs.promises.readFile('package.json');
+        rootScopeInPackageJson = await fs.promises.readFile(__dirname + '/../../' + slash + 'package.json');
+    } catch (e) {
+    }
+
+    wflObjectScopeInUserPackageJson = wflScopeInUserPackageJson?.wfl;
+
+    return {
+        wflType: rootScopeInPackageJson?.wflType,
+        wflObjectScopeInUserPackageJson: wflObjectScopeInUserPackageJson
+    }
 }
 
-wflObjectScopeInUserPackageJson = wflScopeInUserPackageJson?.wfl;
-size = wflObjectScopeInUserPackageJson?.size;
-where = wflObjectScopeInUserPackageJson?.where;
-pathDir = wflObjectScopeInUserPackageJson?.path;
-offset = wflObjectScopeInUserPackageJson?.offset;
-accessToDelete = wflObjectScopeInUserPackageJson?.accessToDelete;
-wflType = rootScopeInPackageJson?.wflType;
 
-let isRelease = wflType === 'release';
+async function getMaximumTimeForDeleteOldFiles() {
+    let init = await init();
+    let offset = init.wflObjectScopeInUserPackageJson?.offset;
 
-function getMaximumTimeForDeleteOldFiles(offset) {
     let twoHours = 7200;
     return typeof offset === 'string' ? ms(offset) : twoHours;
 }
 
-function getMaximumSizeForWriteFile() {
+async function getMaximumSizeForWriteFile() {
+    let init = await init();
+    let size = init.wflObjectScopeInUserPackageJson?.size;
+
     let MaxFileSize = 26214400;
     return typeof size === 'string' ? Util.sizeToByte(size) : MaxFileSize;
 }
 
 
-function mkAllDirsFromList() {
-    listOfDir.forEach(item => {
-        mkdirp(pathDir + slash + item + slash);
+async function mkAllDirsFromList() {
+    let init = await init(),
+        pathDir = init.wflObjectScopeInUserPackageJson?.path;
+
+    for (const item of listOfDir) {
+        await mkdirp(pathDir + slash + item + slash);
+    }
+}
+
+
+async function isSpecificDataWrittenInThisFile(filename, specificData) {
+    return new Promise(res => {
+        fs.readFile(filename, (err, data) => {
+            if (!err && data.includes(specificData)) {
+                res(true);
+                return;
+            }
+            res(false);
+        });
     });
 }
 
 
-function isSpecificDataWrittenInThisFile(filename, specificData, cb) {
-    fs.readFile(filename, (err, data) => {
-        if (!err && data.includes(specificData)) {
-            cb(true);
-            return;
-        }
-        cb(false);
-    });
-}
-
-
-function getFolderName(pathDir) {
+async function getFolderName(pathDir) {
     if (pathDir.includes(slash)) {
         let arr = pathDir.split(slash);
         return arr[arr.length - 1];
@@ -89,105 +96,114 @@ function getFolderName(pathDir) {
 }
 
 
-function getMessageInJsonObject(type, message) {
+async function getMessageInJsonObject(type, message) {
     if (typeof message === 'string')
         return `{ "data": "${new Date()}", "type": "${type}", "message": "${message}" }`;
     return `{ "data": "${new Date()}", "type": "${type}", "message": ${JSON.stringify(message)} }`;
 }
 
 
-function mkRootDir() {
-    if (pathDir && !isExistFile(pathDir) || !isExistFile(slash + 'log'))
-        return mkAllDirsFromList();
+async function mkRootDir() {
+    let init = await init(),
+        pathDir = init.wflObjectScopeInUserPackageJson?.path;
+
+    if (pathDir && !await isExistFile(pathDir) || !await isExistFile(slash + 'log'))
+        return await mkAllDirsFromList();
 }
 
-function mkIgnoreFileInUserRootProject(fileName) {
-    fs.writeFileSync(fileName, '');
-}
-
-
-function appendDataIntoFile(path, data) {
-    fs.appendFileSync(path, data);
-}
-
-function writeIntoFile(path, data) {
-    fs.writeFileSync(path, data);
+async function mkIgnoreFileInUserRootProject(fileName) {
+    await fs.promises.writeFile(fileName, '');
 }
 
 
-function isExistFile(path) {
-    return fs.existsSync(path);
+async function appendDataIntoFile(path, data) {
+    await fs.promises.appendFile(path, data);
 }
 
-function fileIgnoreHandler() {
-    if (!isExistFile(gitignore)) {
-        mkIgnoreFileInUserRootProject(gitignore);
-        writeIntoFile(gitignore, slash + getFolderName(pathDir) + slash + '\n');
+async function writeIntoFile(path, data) {
+    await fs.promises.writeFile(path, data);
+}
+
+
+async function isExistFile(path) {
+    return await fs.promises.access(path) === false;
+}
+
+async function fileIgnoreHandler() {
+    let init = await init(),
+        pathDir = init.wflObjectScopeInUserPackageJson?.path;
+
+    if (!await isExistFile(gitignore)) {
+        await mkIgnoreFileInUserRootProject(gitignore);
+        await writeIntoFile(gitignore, slash + await getFolderName(pathDir) + slash + '\n');
         return;
     }
 
-    if (isExistFile(gitignore)) {
-        isSpecificDataWrittenInThisFile(gitignore, getFolderName(pathDir), result => {
+    if (await isExistFile(gitignore)) {
+        await isSpecificDataWrittenInThisFile(gitignore, await getFolderName(pathDir)).then(async result => {
             if (!result)
-                appendDataIntoFile(gitignore, '\n' + slash + getFolderName(pathDir) + slash);
+                await appendDataIntoFile(gitignore, '\n' + slash + await getFolderName(pathDir) + slash);
         });
     }
 
-    if (!isExistFile(npmignore)) {
-        mkIgnoreFileInUserRootProject(npmignore);
-        writeIntoFile(npmignore, getFolderName(pathDir) + '\n');
+    if (!await isExistFile(npmignore)) {
+        await mkIgnoreFileInUserRootProject(npmignore);
+        await writeIntoFile(npmignore, await getFolderName(pathDir) + '\n');
         return;
     }
 
-    if (isExistFile(npmignore)) {
-        isSpecificDataWrittenInThisFile(npmignore, getFolderName(pathDir), result => {
+    if (await isExistFile(npmignore)) {
+        await isSpecificDataWrittenInThisFile(npmignore, await getFolderName(pathDir)).then(async result => {
             if (!result)
-                appendDataIntoFile(npmignore, '\n' + getFolderName(pathDir));
+                await appendDataIntoFile(npmignore, '\n' + await getFolderName(pathDir));
         });
     }
 
 }
 
-function getFileName(path) {
+async function getFileName(path) {
     let fileNameInDisk;
     try {
-        fileNameInDisk = fs.readFileSync(path + lookFile);
+        fileNameInDisk = await fs.promises.readFile(path + lookFile);
     } catch (e) {
 
     }
     return !fileNameInDisk ? Util.getRandomFileName() : fileNameInDisk.toString();
 }
 
-function fileHandlerFoEachDir(type, message) {
-    let path = pathDir + slash + type + slash,
-        fileName = getFileName(path);
+async function fileHandlerFoEachDir(type, message) {
+    let init = await init(),
+        pathDir = init.wflObjectScopeInUserPackageJson?.path;
 
-    if (!isExistFile(path + fileName)) {
-        writeIntoFile(path + fileName, getMessageInJsonObject(type, message) + '\n');
-        writeIntoFile(path + lookFile, fileName);
+    let path = pathDir + slash + type + slash,
+        fileName = await getFileName(path);
+
+    if (!await isExistFile(path + fileName)) {
+        await writeIntoFile(path + fileName, await getMessageInJsonObject(type, message) + '\n');
+        await writeIntoFile(path + lookFile, fileName);
         return;
     }
 
-    let fileSize = fs.statSync(path + fileName).size;
-    if (fileSize < getMaximumSizeForWriteFile())
-        return appendDataIntoFile(path + fileName, '\n' + getMessageInJsonObject(type, message));
+    let fileSize = await fs.promises.stat(path + fileName);
+    if (fileSize.size < await getMaximumSizeForWriteFile())
+        return appendDataIntoFile(path + fileName, '\n' + await getMessageInJsonObject(type, message));
 
 
     // The file size is greater than the getMaximumSizeForWriteFile function
     let newFileName = Util.getRandomFileName();
-    writeIntoFile(path + newFileName, getMessageInJsonObject(type, message) + '\n');
-    writeIntoFile(path + lookFile, newFileName);
+    await writeIntoFile(path + newFileName, await getMessageInJsonObject(type, message) + '\n');
+    await writeIntoFile(path + lookFile, newFileName);
 
 }
 
 
-function filesHandler(realPath, userTime) {
+async function filesHandler(realPath, userTime) {
 
-    fs.readdir(realPath, (err, files) => {
+    await fs.readdir(realPath, (err, files) => {
 
-        files.forEach(file => {
+        files.forEach(async file => {
 
-            fs.stat(realPath + file, (err, stat) => {
+            await fs.stat(realPath + file, async (err, stat) => {
 
                 let endTime, now;
                 if (err)
@@ -197,9 +213,7 @@ function filesHandler(realPath, userTime) {
                 endTime = new Date(stat.ctime).getTime() + userTime;
 
                 if (now > endTime)
-                    fs.unlink(realPath + file, () => {
-                    });
-
+                    await fs.promises.unlink(realPath + file);
             });
 
         });
@@ -209,16 +223,21 @@ function filesHandler(realPath, userTime) {
 }
 
 
-function DeleteFileAfterSpecifiedPeriod() {
+async function DeleteFileAfterSpecifiedPeriod() {
+
+    let init = await init(),
+        where = init.wflObjectScopeInUserPackageJson?.where,
+        pathDir = init.wflObjectScopeInUserPackageJson?.path;
+
     if (typeof where === 'object') {
         for (let key in where) {
-            setInterval(() => {
+            setInterval(async () => {
 
                 if (!where.hasOwnProperty(key))
                     return;
 
                 let realPath = pathDir + slash + key + slash;
-                filesHandler(realPath, ms(where[key]));
+                await filesHandler(realPath, ms(where[key]));
 
             }, parseInt(ms(where[key])));
         }
@@ -226,36 +245,42 @@ function DeleteFileAfterSpecifiedPeriod() {
     }
 
     setInterval(() => {
-        listOfDir.forEach(item => {
+        listOfDir.forEach(async item => {
             let realPath = pathDir + slash + item + slash;
 
-            filesHandler(realPath, getMaximumTimeForDeleteOldFiles());
+            await filesHandler(realPath, await getMaximumTimeForDeleteOldFiles());
 
         });
-    }, getMaximumTimeForDeleteOldFiles());
+    }, await getMaximumTimeForDeleteOldFiles());
 }
 
 
 module.exports = {
 
-    init() {
-        if (!isRelease)
+    async init() {
+        if (!await this.isRelease())
             return false;
 
-        mkRootDir();
-        fileIgnoreHandler();
-        if (accessToDelete === true)
-            DeleteFileAfterSpecifiedPeriod();
+        await mkRootDir().then(() => fileIgnoreHandler());
 
+        let init = await init(),
+            accessToDelete = init.wflObjectScopeInUserPackageJson?.accessToDelete;
+
+        if (accessToDelete === true)
+            await DeleteFileAfterSpecifiedPeriod();
     },
 
+    async isRelease() {
+        let init = await init();
+        return init.wflType === 'release';
+    },
 
-    write(type, message) {
+    async write(type, message) {
 
-        if (isRelease)
-            setInterval(() => {
-                fileHandlerFoEachDir(type, message);
-            }, getMaximumTimeForDeleteOldFiles());
+        if (await this.isRelease())
+            setInterval(async () => {
+                await fileHandlerFoEachDir(type, message);
+            }, await getMaximumTimeForDeleteOldFiles());
 
     }
 
