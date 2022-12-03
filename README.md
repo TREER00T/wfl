@@ -36,6 +36,8 @@ Log.error('Username Invalid');
 
 ## Configuration
 
+Add this json object to the root object of the package.json file
+
 ```json
 {
   "wfl": {
@@ -49,6 +51,32 @@ Log.error('Username Invalid');
   }
 }
 ```
+
+###Example
+
+
+```json
+{
+  "name": "simple-test",
+  "version": "1.0.0",
+  "description": "This is a simple app",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "wfl": {
+    "size": "15m",
+    "where": {
+      "error": "18m"
+    },
+    "path": "./Logger",
+    "offset": "2h",
+    "accessToDelete": true
+  }
+}
+```
+
+
 
 <br />
 
