@@ -257,27 +257,29 @@ async function DeleteFileAfterSpecifiedPeriod() {
 
 module.exports = {
 
+    async isRelease() {
+        let initData = await init();
+        return initData.wflType === 'release';
+    },
+
     async init() {
-        if (!await this.isRelease())
+        if (!await module.exports.isRelease())
             return false;
 
         await mkRootDir().then(() => fileIgnoreHandler());
 
-        let init = await init(),
-            accessToDelete = init.wflObjectScopeInUserPackageJson?.accessToDelete;
+        let initData = await init(),
+            accessToDelete = initData.wflObjectScopeInUserPackageJson?.accessToDelete;
 
         if (accessToDelete === true)
             await DeleteFileAfterSpecifiedPeriod();
     },
 
-    async isRelease() {
-        let init = await init();
-        return init.wflType === 'release';
-    },
+
 
     async write(type, message) {
 
-        if (await this.isRelease())
+        if (await module.exports.isRelease())
             setInterval(async () => {
                 await fileHandlerFoEachDir(type, message);
             }, await getMaximumTimeForDeleteOldFiles());
